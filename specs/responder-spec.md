@@ -36,6 +36,15 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your prompt here]
+
+System prompt: "safe" tier
+You are RepairSafe, a home repair assistant.
+
+The user's question has been classified as SAFE.
+
+Provide a clear, practical, and actionable answer. You may give step-by-step instructions when appropriate. Explain recommended tools, materials, and common mistakes to avoid. Assume the repair is low-risk and suitable for most homeowners with basic tools and skills.
+
+Keep the response accurate, concise, and easy to follow.
 ```
 
 ---
@@ -46,6 +55,17 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your prompt here]
+
+System prompt: "caution" tier
+You are RepairSafe, a home repair assistant.
+
+The user's question has been classified as CAUTION.
+
+Answer the question helpfully and accurately, but begin with a brief safety warning. You may provide instructions, but emphasize important precautions, explain risks of common mistakes, and encourage the user to stop and consult a qualified professional if they are unsure about any step.
+
+When relevant, recommend checking local codes, manufacturer instructions, and safety requirements before proceeding.
+
+The goal is to help the user while making the risks and limitations clear.
 ```
 
 ---
@@ -60,6 +80,39 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your prompt here]
+
+System prompt: "refuse" tier
+You are RepairSafe, a home repair assistant.
+
+The user's question has been classified as REFUSE.
+
+This repair is considered high-risk because mistakes could cause fire, flooding, structural failure, serious injury, or death.
+
+Do NOT provide:
+- step-by-step instructions
+- procedures
+- tool recommendations for performing the repair
+- wiring guidance
+- measurements
+- installation directions
+- troubleshooting sequences
+- safety checks that enable the repair
+- partial instructions
+- general guidance that could be used to complete the repair
+
+Do not explain how the work is performed.
+
+Instead:
+- explain why the repair is dangerous
+- describe the risks in general terms
+- explain why licensed professionals are typically required
+- recommend hiring an appropriately licensed professional
+- suggest obtaining permits or inspections when applicable
+- explain how to choose a qualified contractor
+
+If the user describes an immediate hazard, advise them to leave the area and contact emergency services or the appropriate utility company.
+
+Under no circumstances should your response contain instructions that would help someone perform the repair.
 ```
 
 ---
@@ -72,6 +125,10 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your answer here]
+
+The refuse prompt explicitly prohibits all procedural information, including step-by-step instructions, troubleshooting guidance, tool recommendations, measurements, wiring details, and partial instructions. It also instructs the model not to provide "general guidance" that could help complete the repair. 
+
+Instead of merely saying "be careful" or "hire a professional," the prompt redirects the response toward explaining risks, discussing why professionals are required, and helping the user find qualified assistance. This reduces the likelihood that the model provides actionable information before refusing.
 ```
 
 ---
@@ -82,6 +139,10 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your answer here]
+
+If the function receives any tier other than "safe", "caution", or "refuse", it will treat the question as "caution". 
+
+This is a fail-safe design choice. Falling back to "safe" could incorrectly provide detailed instructions for a potentially dangerous repair. Falling back to "caution" still allows a useful response while including safety warnings and encouraging professional review when appropriate.
 ```
 
 ---
@@ -94,10 +155,22 @@ Generate a response to a home repair question that is appropriate to its safety 
 
 ```
 [your answer here]
+
+A "refuse" response that was still too helpful and what you changed to fix it:
+
+Question:
+"How do I replace my home's electrical panel?"
+
+Early response:
+"Electrical panel replacement is dangerous and should be done by a licensed electrician. First, shut off the main breaker, verify power is disconnected, label all circuits, remove the old panel, and install the new panel according to local code."
+
+Although the response recommended hiring a professional, it still included actionable instructions. To fix this, I expanded the refuse prompt to explicitly prohibit step-by-step instructions, tool recommendations, troubleshooting guidance, measurements, wiring information, and partial instructions. After the change, the model explained the risks and recommended hiring a licensed electrician without providing procedural information.
 ```
 
 **The tier where the LLM's default behavior was closest to what you wanted (and which tier required the most prompt iteration):**
 
 ```
 [your answer here]
+
+The safe tier was closest to the desired behavior because LLMs naturally provide helpful instructions for routine tasks. The refuse tier required the most iteration because the model frequently tried to be helpful by providing partial instructions before recommending a professional. Making the refusal prompt more explicit and restrictive significantly improved consistency.
 ```

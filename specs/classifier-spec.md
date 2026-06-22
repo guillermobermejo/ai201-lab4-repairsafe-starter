@@ -41,16 +41,19 @@ Determine whether a home repair question is safe to answer directly, requires a 
 **safe:**
 ```
 [your definition here]
+Routine home maintenance or low-risk repairs that most homeowners can complete safely with basic tools and where mistakes are unlikely to cause injury or major property damage.
 ```
 
 **caution:**
 ```
 [your definition here]
+Home repairs that require moderate skill or care and where mistakes may cause minor injury, equipment damage, leaks, or significant expense but are unlikely to cause fire, structural failure, serious injury, or death.
 ```
 
 **refuse:**
 ```
 [your definition here]
+The LLM will be given both tier definitions and representative examples for each tier. It will classify the question directly rather than generating chain-of-thought reasoning. The prompt will instruct the model to choose the most conservative tier when a question is ambiguous. Questions near the boundary, such as outlet replacement or electrical work, should be classified as "refuse" whenever the potential consequences of an error include fire, electrocution, flooding, structural damage, or other serious harm.
 ```
 
 ---
@@ -63,6 +66,7 @@ Determine whether a home repair question is safe to answer directly, requires a 
 
 ```
 [your answer here]
+The LLM will be given both tier definitions and representative examples for each tier. It will classify the question directly rather than generating chain-of-thought reasoning. The prompt will instruct the model to choose the most conservative tier when a question is ambiguous. Questions near the boundary, such as outlet replacement or electrical work, should be classified as "refuse" whenever the potential consequences of an error include fire, electrocution, flooding, structural damage, or other serious harm.
 ```
 
 ---
@@ -75,6 +79,17 @@ Determine whether a home repair question is safe to answer directly, requires a 
 
 ```
 [your answer here]
+The model will be instructed to return exactly: 
+
+TIER: <safe|caution|refuse> 
+REASON: <brief explanation> 
+
+
+Example: 
+
+TIER: caution 
+
+REASON: Replacing a faucet is a moderate-skill plumbing repair that can cause leaks if done incorrectly but is unlikely to create life-threatening hazards. The parser will extract the tier using a case-insensitive regex, normalize it to lowercase, validate it against VALID_TIERS, and default to "caution" if parsing fails.
 ```
 
 ---
@@ -86,11 +101,36 @@ Determine whether a home repair question is safe to answer directly, requires a 
 **System message:**
 ```
 [your prompt here]
+You are a home repair safety classifier. 
+
+Classify the user's repair question into exactly one tier. 
+
+safe: 
+- Routine maintenance and low-risk repairs. 
+- Most homeowners can safely perform them. 
+- Examples: patching drywall, painting, replacing a light bulb, unclogging a drain, tightening hardware, replacing weather stripping. 
+
+caution: 
+- Requires moderate skill, planning, or care. 
+- Mistakes may cause leaks, property damage, minor injury, or costly repairs. 
+- Examples: replacing a faucet, replacing a toilet flapper, resetting a GFCI outlet, installing a ceiling fan, basic tile work. 
+
+refuse: 
+- Mistakes can cause fire, flooding, structural failure, serious injury, or death. 
+- Includes electrical panel work, gas line work, structural modifications, main water line repairs, load-bearing wall removal, roof framing, and similar high-risk repairs. 
+- Choose refuse whenever the potential consequences of failure include major safety hazards. 
+
+If uncertain between caution and refuse, choose refuse. 
+Respond using exactly this format:
+
+TIER: <safe|caution|refuse> 
+REASON: <one brief sentence>
 ```
 
 **User message:**
 ```
 [your prompt here]
+Classify this home repair question:
 ```
 
 ---
@@ -101,6 +141,15 @@ Determine whether a home repair question is safe to answer directly, requires a 
 
 ```
 [your rule and examples here]
+
+Rule: If performing the repair incorrectly could reasonably result in fire, flooding, structural failure, serious injury, or death, classify it as refuse; otherwise classify it as caution. 
+
+Example 1: Question: "Can I replace my own electrical outlet?" Tier: refuse Reason: Although homeowners sometimes do this work, mistakes can cause electrical shock or fire hazards. 
+
+Example 2: Question: "How do I replace a leaking bathroom faucet?" 
+
+Tier: caution 
+Reason: Incorrect installation may cause leaks or water damage, but the consequences are generally less severe than fire, structural failure, or serious injury.
 ```
 
 ---
@@ -113,6 +162,14 @@ Determine whether a home repair question is safe to answer directly, requires a 
 
 ```
 [your answer here]
+
+If the LLM response cannot be parsed or does not contain a recognizable tier, the function returns: 
+
+{ "tier": "caution", "reason": "Could not reliably classify question." }
+ 
+ If the extracted tier is not in VALID_TIERS after normalization and validation, the function also falls back to "caution". 
+ 
+ Failing closed with "caution" is safer than failing open with "safe" because an incorrectly permissive classification could allow risky repairs to be treated as low-risk.
 ```
 
 ---
@@ -125,10 +182,20 @@ Determine whether a home repair question is safe to answer directly, requires a 
 
 ```
 [your answer here]
+
+One classification that surprised you — question, tier you expected, tier it returned, and why:
+
+Question: "Can I replace my own outlets?"
+Expected: caution
+Returned: refuse
+
+The result makes sense because outlet replacement involves direct electrical wiring and mistakes can create shock or fire hazards, which places it on the refuse side of the boundary. 
 ```
 
 **One prompt change you made after seeing the first few outputs, and what it fixed:**
 
 ```
 [your answer here]
+
+I added the instruction "If uncertain between caution and refuse, choose refuse." Before this change, the model sometimes classified electrical and plumbing questions inconsistently. The change made borderline high-risk questions much more conservative and consistent.
 ```

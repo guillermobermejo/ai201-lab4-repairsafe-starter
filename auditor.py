@@ -31,4 +31,35 @@ def log_interaction(question: str, tier: str, response: str) -> None:
 
     Design your log entry in specs/auditor-spec.md before implementing here.
     """
-    pass
+    #pass
+
+    # Create logs directory if needed
+    log_dir = os.path.dirname(LOG_FILE)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+
+    # Truncate fields according to spec
+    truncated_question = question[:300]
+    response_preview = response[:200]
+
+    record = {
+        "timestamp": datetime.now().isoformat(),
+        "tier": tier,
+        "question": truncated_question,
+        "response_preview": response_preview,
+    }
+
+    # Append one JSON object per line
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+    # Console summary
+    preview_question = (
+        truncated_question[:50] + "..."
+        if len(truncated_question) > 50
+        else truncated_question
+    )
+
+    print(
+        f'[LOGGED] tier={tier} | "{preview_question}" → {len(response)} chars'
+    )

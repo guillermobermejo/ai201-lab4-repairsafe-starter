@@ -43,8 +43,8 @@ Record every interaction — question, safety tier, and response preview — to 
 | `"tier"` | `str` | Safety tier assigned to this question |
 | `"question"` | `str` | The user's question, truncated to 300 characters |
 | `"response_preview"` | `str` | First 200 characters of the generated response |
-| `[your field]` | `[type]` | [description] |
-| `[your field]` | `[type]` | [description] |
+| `[timestamp]` | `[tier]` | [question] |
+| `[response_preview]` | `[model]` | [classification_reason] |
 
 ---
 
@@ -54,6 +54,12 @@ Record every interaction — question, safety tier, and response preview — to 
 
 ```
 [your answer here]
+
+The 300-character limit for the question preserves enough context to understand what repair was being asked about (e.g., “replace kitchen faucet” vs “replace leaking faucet under sink”), while preventing logs from storing large or sensitive user inputs unnecessarily.
+
+The 200-character limit for the response preview gives enough signal to understand what the model produced (especially whether it gave instructions, warnings, or refused) without storing full responses, which could become large, repetitive, or potentially sensitive at scale.
+
+If truncation were more aggressive, you would lose diagnostic detail needed to understand misclassifications or response quality issues. If logs stored full text, the system would become expensive to store, harder to scan, and potentially expose unnecessary user data in production logs.
 ```
 
 ---
@@ -64,6 +70,10 @@ Record every interaction — question, safety tier, and response preview — to 
 
 ```
 [your answer here]
+
+If logs/ does not exist when the function runs, it is created using os.makedirs(..., exist_ok=True).
+
+This is important because file logging must be reliable even on first run or fresh deployments. Without this, the first interaction would crash the system before any response is generated, which is unacceptable in a production pipeline where logging is part of the core safety and auditability design.
 ```
 
 ---
@@ -74,6 +84,8 @@ Record every interaction — question, safety tier, and response preview — to 
 
 ```
 [your example output here]
+
+[LOGGED] 2026-06-22T14:32:17Z | tier=caution | "replace kitchen faucet?" → 412 chars
 ```
 
 ---
@@ -86,10 +98,18 @@ Record every interaction — question, safety tier, and response preview — to 
 
 ```
 [your answer here]
+
+{"timestamp":"2026-06-22T14:31:01Z","tier":"safe","question":"How do I patch a small hole in drywall?","response_preview":"Start by cleaning the area around the hole. Apply spackle using a putty knife..."}
+{"timestamp":"2026-06-22T14:31:45Z","tier":"caution","question":"How do I replace a bathroom faucet?","response_preview":"Before starting, shut off the water supply. Replacing a faucet requires care..."}
+{"timestamp":"2026-06-22T14:32:17Z","tier":"refuse","question":"How do I replace my electrical panel?","response_preview":"This is a high-risk electrical system repair that should be handled by a licensed electrician..."}
 ```
 
 **One field you'd add to the log if this were a real production system handling 10,000 questions per day:**
 
 ```
 [your answer here]
+
+"user_feedback_flag" (str or bool)
+
+This would allow tracking whether users reported a response as helpful, unsafe, or incorrect. At scale, this is critical for identifying systematic classifier errors that internal logs alone might not reveal, especially in borderline cases where the model and user perception diverge.
 ```

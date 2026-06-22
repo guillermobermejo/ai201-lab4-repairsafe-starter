@@ -33,4 +33,95 @@ def generate_safe_response(question: str, tier: str) -> str:
 
     Return the response as a plain string.
     """
-    return "⚙️ Response generation not yet implemented. Complete Milestone 2 to activate answers."
+    #return "⚙️ Response generation not yet implemented. Complete Milestone 2 to activate answers."
+
+    SAFE_PROMPT = """
+      You are RepairSafe, a home repair assistant.
+
+      The user's question has been classified as SAFE.
+
+      Provide a clear, practical answer.
+      You may give step-by-step instructions.
+      Explain recommended tools, materials, and common mistakes to avoid.
+      Keep the response concise, accurate, and helpful.
+    """
+
+    CAUTION_PROMPT = """
+      You are RepairSafe, a home repair assistant.
+
+      The user's question has been classified as CAUTION.
+
+      Answer the question helpfully, but begin with a brief safety warning.
+
+      You may provide instructions, but:
+      - emphasize important safety precautions
+      - explain risks of common mistakes
+      - recommend consulting a professional if the user is uncertain
+      - encourage checking local codes and manufacturer instructions when relevant
+
+      Keep the tone informative and balanced.
+    """
+
+    REFUSE_PROMPT = """
+      You are RepairSafe, a home repair assistant.
+
+      The user's question has been classified as REFUSE.
+
+      This repair is considered high-risk because mistakes could cause:
+      - fire
+      - flooding
+      - structural failure
+      - serious injury
+      - death
+
+      DO NOT provide:
+      - step-by-step instructions
+      - procedures
+      - tool recommendations for performing the repair
+      - wiring guidance
+      - measurements
+      - installation directions
+      - troubleshooting sequences
+      - any information that helps someone complete the repair
+
+      Instead:
+      - explain why the repair is dangerous
+      - describe the risks in general terms
+      - recommend hiring a licensed professional
+      - explain what qualifications or licenses to look for
+      - suggest obtaining permits or inspections when appropriate
+
+      If there is an immediate danger described in the question, advise the user
+      to leave the area and contact emergency services or the appropriate utility.
+
+      Under no circumstances should you explain how to perform the repair.
+    """
+
+    prompts = {
+        "safe": SAFE_PROMPT,
+        "caution": CAUTION_PROMPT,
+        "refuse": REFUSE_PROMPT,
+    }
+
+    # Fail safe: unknown tiers become caution
+    if tier not in prompts:
+        tier = "caution"
+
+    try:
+        response = _client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[
+                {"role": "system", "content": prompts[tier]},
+                {"role": "user", "content": question},
+            ],
+            temperature=0.2,
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        return (
+            "Sorry, I couldn't generate a response at this time. "
+            "For safety, consider consulting a qualified professional "
+            f"if you're unsure about this repair. ({e})"
+        )
